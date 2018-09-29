@@ -1,6 +1,6 @@
 name := "elastic4s-sample"
 
-scalaVersion := "2.12.6"
+scalaVersion := "2.12.7"
 
 val elastic4sVersion = "6.3.7"
 
