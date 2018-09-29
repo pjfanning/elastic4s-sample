@@ -1,3 +1,5 @@
+package com.example.elastic4s
+
 import com.sksamuel.elastic4s.RefreshPolicy
 import com.sksamuel.elastic4s.embedded.LocalNode
 import com.sksamuel.elastic4s.http._
