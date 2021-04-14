@@ -1,37 +1,27 @@
 package com.example.elastic4s
 
-import com.sksamuel.elastic4s.RefreshPolicy
-import com.sksamuel.elastic4s.embedded.LocalNode
-import com.sksamuel.elastic4s.http._
-import com.sksamuel.elastic4s.http.search.SearchResponse
+import com.sksamuel.elastic4s.http.JavaClient
+import com.sksamuel.elastic4s.{ElasticClient, ElasticProperties, RequestFailure, RequestSuccess}
+import com.sksamuel.elastic4s.requests.common.RefreshPolicy
+import com.sksamuel.elastic4s.requests.mappings.TextField
+import com.sksamuel.elastic4s.requests.searches.SearchResponse
 
 object ArtistIndex extends App {
 
-  // spawn an embedded node for testing
-  //val localNode = LocalNode("mycluster", "/tmp/datapath")
-
-  // in this example we create a client attached to the embedded node, but
-  // in a real application you would provide the HTTP address to the ElasticClient constructor.
-  //val client = localNode.client(shutdownNodeOnClose = true)
-
-  val client = ElasticClient(ElasticProperties("http://localhost:9200"))
+  // in this example we create a client to a local Docker container at localhost:9200
+  val client = ElasticClient(JavaClient(ElasticProperties(s"http://${sys.env.getOrElse("ES_HOST", "127.0.0.1")}:${sys.env.getOrElse("ES_PORT", "9200")}")))
 
   // we must import the dsl
-  import com.sksamuel.elastic4s.http.ElasticDsl._
+  import com.sksamuel.elastic4s.ElasticDsl._
 
   // Next we create an index in advance ready to receive documents.
   // await is a helper method to make this operation synchronous instead of async
   // You would normally avoid doing this in a real program as it will block
   // the calling thread but is useful when testing
-
-  //client.execute {
-  //  deleteIndex("artists")
-  //}.await
-
   client.execute {
-    createIndex("artists").mappings(
-      mapping("modern").fields(
-        textField("name")
+    createIndex("artists").mapping(
+      properties(
+        TextField("name")
       )
     )
   }.await
@@ -40,17 +30,12 @@ object ArtistIndex extends App {
   // The RefreshPolicy.Immediate means that we want this document to flush to the disk immediately.
   // see the section on Eventual Consistency.
   client.execute {
-    indexInto("artists" / "modern").id("L.S. Lowry").fields("birthPlace" -> "Manchester")
-      .refresh(RefreshPolicy.Immediate)
-  }.await
-  client.execute {
-    indexInto("artists" / "modern").id("Georges Seurat").fields("birthPlace" -> "Paris")
-      .refresh(RefreshPolicy.Immediate)
+    indexInto("artists").fields("name" -> "L.S. Lowry").refresh(RefreshPolicy.Immediate)
   }.await
 
   // now we can search for the document we just indexed
   val resp = client.execute {
-    search("artists") query "Manchester"
+    search("artists").query("lowry")
   }.await
 
   // resp is a Response[+U] ADT consisting of either a RequestFailure containing the
@@ -61,6 +46,7 @@ object ArtistIndex extends App {
   resp match {
     case failure: RequestFailure => println("We failed " + failure.error)
     case results: RequestSuccess[SearchResponse] => println(results.result.hits.hits.toList)
+    case results: RequestSuccess[_] => println(results.result)
   }
 
   // Response also supports familiar combinators like map / flatMap / foreach:
