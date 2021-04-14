@@ -40,31 +40,35 @@ object ArtistIndex extends App {
   // The RefreshPolicy.Immediate means that we want this document to flush to the disk immediately.
   // see the section on Eventual Consistency.
   client.execute {
-    indexInto("artists" / "modern").id("L.S. Lowry").fields("birthPlace" -> "Manchester")
+    indexInto("artists" / "modern").id("L.S. Lowry").fields(("birthPlace" -> "Manchester"))
       .refresh(RefreshPolicy.Immediate)
   }.await
   client.execute {
-    indexInto("artists" / "modern").id("Georges Seurat").fields("birthPlace" -> "Paris")
+    indexInto("artists" / "modern").id("Georges Seurat").fields(("birthPlace" -> "Paris"))
       .refresh(RefreshPolicy.Immediate)
   }.await
 
   // now we can search for the document we just indexed
   val resp = client.execute {
-    search("artists") query "Manchester"
+    //search("artists") query wildcardQuery("birthPlace", "M*")
+    com.sksamuel.elastic4s.http.ElasticDsl.explain("artists", "modern", Encoder.encode("L.S. Lowry"))
+      .query(regexQuery("birthPlace", "M.*"))
   }.await
+
+  println(resp.result)
 
   // resp is a Response[+U] ADT consisting of either a RequestFailure containing the
   // Elasticsearch error details, or a RequestSuccess[U] that depends on the type of request.
   // In this case it is a RequestSuccess[SearchResponse]
 
-  println("---- Search Results ----")
-  resp match {
-    case failure: RequestFailure => println("We failed " + failure.error)
-    case results: RequestSuccess[SearchResponse] => println(results.result.hits.hits.toList)
-  }
+  //println("---- Search Results ----")
+  //resp match {
+  //  case failure: RequestFailure => println("We failed " + failure.error)
+  //  case results: RequestSuccess[SearchResponse] => println(results.result.hits.hits.toList)
+  //}
 
   // Response also supports familiar combinators like map / flatMap / foreach:
-  resp foreach (search => println(s"There were ${search.totalHits} total hits"))
+  //resp foreach (search => println(s"There were ${search.totalHits} total hits"))
 
   client.close()
 }
