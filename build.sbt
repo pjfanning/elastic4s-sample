@@ -2,7 +2,7 @@ name := "elastic4s-sample"
 
 scalaVersion := "2.13.5"
 
-val elastic4sVersion = "7.1.12"
+val elastic4sVersion = "7.12.0"
 
 libraryDependencies ++= Seq(
   "com.sksamuel.elastic4s" %% "elastic4s-client-esjava" % elastic4sVersion,
